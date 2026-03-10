@@ -30,12 +30,19 @@ export interface MigrationResult {
 }
 
 export async function runMigration(
-  file: File,
+  files: FileList,
+  entryFilename: string,
   targetDialect: string,
   sourceDialect: string
 ): Promise<MigrationResult> {
   const form = new FormData();
-  form.append("file", file);
+  
+  // Append all files under the same key 'files'
+  for (let i = 0; i < files.length; i++) {
+    form.append("files", files[i]);
+  }
+  
+  form.append("entry_filename", entryFilename);
   form.append("target_dialect", targetDialect);
   form.append("source_dialect", sourceDialect);
   const { data } = await axios.post<MigrationResult>(`${BASE}/migrate`, form, {

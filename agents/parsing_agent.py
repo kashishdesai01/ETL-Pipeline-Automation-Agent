@@ -23,10 +23,16 @@ def parsing_agent(state: PipelineContext) -> PipelineContext:
     logger.info(f"AST extracted: tables={ast_metadata.get('tables')}, fallback={ast_metadata.get('fallback')}")
 
     # Step 2: LLM intent extraction
+    # Format context files
+    context_str = "None"
+    if state.context_files:
+        context_str = "\n".join([f"--- File: {k} ---\n{v}\n" for k, v in state.context_files.items()])
+
     user_message = PARSING_USER_TEMPLATE.format(
         source_dialect=state.source_dialect,
         raw_sql=state.raw_legacy_code,
         ast_metadata=json.dumps(ast_metadata, indent=2),
+        project_context=context_str,
     )
 
     try:
@@ -39,7 +45,10 @@ def parsing_agent(state: PipelineContext) -> PipelineContext:
             response_format={"type": "json_object"},
             temperature=0,
         )
-        intent_json = json.loads(response.choices[0].message.content)
+        response_content = response.choices[0].message.content
+        if response_content is None:
+            raise ValueError("No content in response")
+        intent_json = json.loads(response_content)
         logger.info(f"Intent extracted: summary='{intent_json.get('summary', '')[:80]}...'")
     except Exception as e:
         logger.error(f"Parsing LLM call failed: {e}")

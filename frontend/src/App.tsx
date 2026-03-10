@@ -31,7 +31,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("diff");
   const [apiOk, setApiOk] = useState<boolean | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [entryFilename, setEntryFilename] = useState<string>("");
 
   // Check backend health on mount
   useEffect(() => {
@@ -50,13 +51,14 @@ export default function App() {
   }, [loading]);
 
   async function handleMigrate() {
-    const file = fileRef.current?.files?.[0];
-    if (!file) { setError("Please select a SQL file first"); return; }
+    if (!selectedFiles || selectedFiles.length === 0) { setError("Please select at least one SQL file"); return; }
+    if (!entryFilename) { setError("Please select a primary file to migrate"); return; }
+    
     setLoading(true);
     setError(null);
     setResult(null);
     try {
-      const data = await runMigration(file, targetDialect, sourceDialect);
+      const data = await runMigration(selectedFiles, entryFilename, targetDialect, sourceDialect);
       setResult(data);
       setActiveTab("diff");
     } catch (e: any) {
@@ -87,14 +89,41 @@ export default function App() {
         <h2>Migration Configuration</h2>
         <div className="controls">
           <div className="control-group file-upload">
-            <label>Legacy SQL File</label>
+            <label>SQL Files</label>
             <input
               ref={fileRef}
               type="file"
+              multiple
               accept=".sql,.py"
-              onChange={(e) => setFileName(e.target.files?.[0]?.name || null)}
+              onChange={(e) => {
+                const files = e.target.files;
+                setSelectedFiles(files);
+                if (files && files.length > 0) {
+                  // Default to first file if none selected or previous selection is no longer valid
+                  if (!entryFilename || !Array.from(files).find(f => f.name === entryFilename)) {
+                    setEntryFilename(files[0].name);
+                  }
+                } else {
+                  setEntryFilename("");
+                }
+              }}
             />
           </div>
+          
+          {selectedFiles && selectedFiles.length > 0 && (
+            <div className="control-group">
+              <label>Primary File to Migrate</label>
+              <select value={entryFilename} onChange={(e) => setEntryFilename(e.target.value)}>
+                {Array.from(selectedFiles).map((f) => (
+                  <option key={f.name} value={f.name}>{f.name}</option>
+                ))}
+              </select>
+              <small style={{display: 'block', marginTop: '4px', color: 'var(--text-muted)'}}>
+                Other files will be used as context.
+              </small>
+            </div>
+          )}
+
           <div className="control-group">
             <label>Source Dialect</label>
             <select value={sourceDialect} onChange={(e) => setSourceDialect(e.target.value)}>
@@ -107,7 +136,7 @@ export default function App() {
               {TARGET_DIALECTS.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
-          <button className="run-btn" onClick={handleMigrate} disabled={loading || !fileName}>
+          <button className="run-btn" onClick={handleMigrate} disabled={loading || !selectedFiles || selectedFiles.length === 0}>
             {loading ? <Loader2 size={16} className="spin" /> : <Zap size={16} />}
             {loading ? "Migrating..." : "Run Migration"}
           </button>

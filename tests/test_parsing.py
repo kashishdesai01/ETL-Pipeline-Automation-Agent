@@ -4,7 +4,6 @@ Unit tests for the sqlglot AST parsing and transpilation tools.
 Run with: pytest tests/ -v
 """
 
-import pytest
 from core.tools import parse_sql_ast, transpile_sql, validate_sql_syntax
 
 ORACLE_SQL = """

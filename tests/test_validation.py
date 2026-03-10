@@ -5,7 +5,6 @@ Run with: pytest tests/ -v
 """
 
 import duckdb
-import pytest
 from core.synthetic_data import create_synthetic_tables
 from agents.validation_agent import _row_checksum, _normalize_value, _strip_snowflake_specific
 
@@ -21,7 +20,9 @@ def test_create_synthetic_tables_creates_tables():
     assert "orders" in tables
     assert "customers" in tables
     # Tables should have rows
-    row_count = con.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+    row = con.execute("SELECT COUNT(*) FROM orders").fetchone()
+    assert row is not None
+    row_count = row[0]
     assert row_count > 0
     con.close()
 

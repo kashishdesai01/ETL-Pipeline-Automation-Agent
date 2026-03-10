@@ -32,7 +32,10 @@ def planning_agent(state: PipelineContext) -> PipelineContext:
             response_format={"type": "json_object"},
             temperature=0,
         )
-        data = json.loads(response.choices[0].message.content)
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("No content from LLM prompt")
+        data = json.loads(content)
         steps_raw = data.get("steps", [])
         state.migration_plan = [MigrationStep(**s) for s in steps_raw]
         logger.info(f"Migration plan: {len(state.migration_plan)} steps generated")

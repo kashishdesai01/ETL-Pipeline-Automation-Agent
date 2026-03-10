@@ -49,21 +49,32 @@ class MigrationResponse(BaseModel):
 
 @app.post("/migrate", response_model=MigrationResponse)
 async def migrate(
-    file: UploadFile,
+    files: list[UploadFile],
+    entry_filename: str = Form(...),
     target_dialect: str = Form(default="snowflake"),
     source_dialect: str = Form(default="oracle"),
 ):
     """
-    Run the full ETL migration pipeline on an uploaded legacy SQL file.
+    Run the full ETL migration pipeline on uploaded legacy SQL files.
     Returns parsed intent, migration plan, rewritten SQL, and validation results.
     """
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
 
-    legacy_code = (await file.read()).decode("utf-8")
+    legacy_code = ""
+    context_files = {}
+
+    for file in files:
+        if not file.filename:
+            continue
+        content = (await file.read()).decode("utf-8")
+        if file.filename == entry_filename:
+            legacy_code = content
+        else:
+            context_files[file.filename] = content
 
     if not legacy_code.strip():
-        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+        raise HTTPException(status_code=400, detail=f"Entry file '{entry_filename}' is empty or wasn't uploaded.")
 
     # Validate target dialect
     try:
@@ -80,13 +91,16 @@ async def migrate(
         raw_legacy_code=legacy_code,
         source_dialect=source_dialect,
         target_dialect=target_enum.value,
+        context_files=context_files,
     )
 
-    logger.info(f"Migration request: {file.filename} | {source_dialect} → {target_dialect}")
+    logger.info(f"Migration request: {entry_filename} (+{len(context_files)} context files) | {source_dialect} → {target_dialect}")
 
     try:
-        graph = build_graph()
-        final: PipelineContext = graph.invoke(initial_state)
+        from langgraph.graph.state import CompiledStateGraph
+        graph: CompiledStateGraph = build_graph()
+        raw_final = graph.invoke(initial_state)
+        final: PipelineContext = PipelineContext(**raw_final) if isinstance(raw_final, dict) else raw_final
     except Exception as e:
         logger.error(f"Pipeline error: {e}")
         raise HTTPException(status_code=500, detail=f"Pipeline failed: {str(e)}")

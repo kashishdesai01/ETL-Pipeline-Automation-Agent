@@ -22,6 +22,7 @@ class PipelineContext(BaseModel):
     raw_legacy_code: str
     source_dialect: str = "oracle"
     target_dialect: str = "snowflake"
+    context_files: dict[str, str] = Field(default_factory=dict)
 
     # Parsing Agent outputs
     intent_json: Optional[dict] = None

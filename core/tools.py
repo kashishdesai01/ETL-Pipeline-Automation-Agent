@@ -7,6 +7,7 @@ All LLM agents use these tools as deterministic preprocessing steps.
 import logging
 import sqlglot
 from sqlglot import expressions as exp
+from sqlglot.errors import ParseError
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ def parse_sql_ast(sql: str, dialect: str = "oracle") -> dict:
     """
     try:
         parsed = sqlglot.parse_one(sql, read=dialect, error_level=sqlglot.ErrorLevel.WARN)
-    except sqlglot.errors.ParseError as e:
+    except ParseError as e:
         logger.warning(f"sqlglot parse failed for dialect={dialect}: {e}")
         return {
             "parse_error": str(e),
@@ -65,7 +66,7 @@ def transpile_sql(sql: str, source: str, target: str) -> str:
             error_level=sqlglot.ErrorLevel.WARN,
         )
         return results[0] if results else ""
-    except sqlglot.errors.ParseError as e:
+    except ParseError as e:
         logger.warning(f"Transpile failed ({source}→{target}): {e}")
         return f"TRANSPILE_ERROR: {str(e)}\n\nOriginal SQL:\n{sql}"
 
@@ -83,5 +84,5 @@ def validate_sql_syntax(sql: str, dialect: str = "snowflake") -> tuple[bool, str
     try:
         sqlglot.parse_one(sql, read=dialect, error_level=sqlglot.ErrorLevel.RAISE)
         return True, ""
-    except sqlglot.errors.ParseError as e:
+    except ParseError as e:
         return False, str(e)

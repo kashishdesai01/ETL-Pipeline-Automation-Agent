@@ -20,6 +20,9 @@ Here is a legacy {source_dialect} SQL pipeline and its parsed AST:
 --- AST METADATA ---
 {ast_metadata}
 
+--- ADDITIONAL REPOSITORY CONTEXT ---
+{project_context}
+
 Return a JSON object with these EXACT keys:
 {{
   "summary": "Plain English: what does this pipeline do?",
@@ -94,6 +97,9 @@ ORIGINAL INTENT (source of truth — do not change this logic):
 
 MECHANICALLY TRANSPILED SQL (starting point — may have issues):
 {transpiled_sql}
+
+ADDITIONAL REPOSITORY CONTEXT (functions, tables, etc. you may need to resolve dependencies):
+{project_context}
 
 PREVIOUS ERROR (if any — fix this):
 {error_trace}

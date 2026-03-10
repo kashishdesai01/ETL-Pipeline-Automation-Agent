@@ -40,7 +40,8 @@ def run_evals(target_dialect: str = "snowflake"):
     print("─" * 60)
 
     results = []
-    graph = build_graph()
+    from langgraph.graph.state import CompiledStateGraph
+    graph: CompiledStateGraph = build_graph()
 
     for fname in files:
         path = os.path.join(GOLDEN_DIR, fname)
@@ -54,7 +55,8 @@ def run_evals(target_dialect: str = "snowflake"):
         )
 
         try:
-            final = graph.invoke(state)
+            raw_final = graph.invoke(state)
+            final: PipelineContext = PipelineContext(**raw_final) if isinstance(raw_final, dict) else raw_final
             passed = bool(
                 final.validation_result.passed
                 if final.validation_result

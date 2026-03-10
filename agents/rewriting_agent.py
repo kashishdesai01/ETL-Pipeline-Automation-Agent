@@ -31,11 +31,17 @@ def rewriting_agent(state: PipelineContext) -> PipelineContext:
     logger.info("sqlglot transpile complete")
 
     # ── Pass 2: LLM refinement ────────────────────────────────────────
+    # Format context files
+    context_str = "None"
+    if state.context_files:
+        context_str = "\n".join([f"--- File: {k} ---\n{v}\n" for k, v in state.context_files.items()])
+
     system = REWRITING_SYSTEM_PROMPT.format(target_dialect=state.target_dialect)
     user = REWRITING_USER_TEMPLATE.format(
         target_dialect=state.target_dialect,
         intent_json=json.dumps(state.intent_json, indent=2),
         transpiled_sql=transpiled,
+        project_context=context_str,
         error_trace=state.error_trace or "None",
     )
 
@@ -48,7 +54,10 @@ def rewriting_agent(state: PipelineContext) -> PipelineContext:
             ],
             temperature=0.1,
         )
-        rewritten = response.choices[0].message.content.strip()
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("No content returned from LLM")
+        rewritten = content.strip()
 
         # Strip accidental markdown fences
         if rewritten.startswith("```"):

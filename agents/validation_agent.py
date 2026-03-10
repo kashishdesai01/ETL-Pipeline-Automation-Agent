@@ -7,6 +7,7 @@ Compares row counts and checksums. Routes failures back to the rewriting agent.
 import hashlib
 import json
 import logging
+import re
 import duckdb
 from core.state import PipelineContext, ValidationResult
 from core.synthetic_data import create_synthetic_tables
@@ -45,6 +46,14 @@ def _strip_snowflake_specific(sql: str) -> str:
     }
     for dialect_fn, replacement in replacements.items():
         sql = sql.replace(dialect_fn, replacement)
+        
+    # Replace DATEADD(part, amount, date) with (date + INTERVAL (amount) part) DuckDB equivalent
+    sql = re.sub(
+        r'DATEADD\(\s*(\w+)\s*,\s*(-?\d+)\s*,\s*([^)]+)\)',
+        r'(\3 + INTERVAL (\2) \1)',
+        sql,
+        flags=re.IGNORECASE
+    )
     return sql
 
 

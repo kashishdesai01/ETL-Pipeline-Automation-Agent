@@ -10,6 +10,7 @@ Flow:
 
 import logging
 from langgraph.graph import StateGraph, END
+from langgraph.graph.state import CompiledStateGraph
 from core.state import PipelineContext
 from agents.parsing_agent import parsing_agent
 from agents.planning_agent import planning_agent
@@ -41,7 +42,7 @@ def _route_after_validate(state: PipelineContext) -> str:
     return "rewrite"
 
 
-def build_graph() -> StateGraph:
+def build_graph() -> CompiledStateGraph:
     graph = StateGraph(PipelineContext)
 
     # Register nodes

@@ -6,7 +6,6 @@ Usage: python main.py legacy_samples/oracle_001.sql [--target snowflake]
 import argparse
 import json
 import logging
-import sys
 
 from core.graph import build_graph
 from core.state import PipelineContext
@@ -34,7 +33,8 @@ def run_migration(sql_path: str, target_dialect: str = "snowflake") -> dict:
 
     logger.info(f"Starting migration: {sql_path} → {target_dialect}")
     graph = build_graph()
-    final: PipelineContext = graph.invoke(initial_state)
+    raw_final = graph.invoke(initial_state)
+    final = PipelineContext(**raw_final) if isinstance(raw_final, dict) else raw_final
 
     report = {
         "source_file": sql_path,
